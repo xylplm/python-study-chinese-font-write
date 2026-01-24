@@ -95,7 +95,7 @@ def draw_header(c, page_width, page_height, font_name):
     # 标题
     c.setFont(font_name, 24)
     c.setFillColor(colors.black)
-    c.drawCentredString(page_width / 2, page_height - 20 * mm, "生字专项练习")
+    c.drawCentredString(page_width / 2, page_height - 20 * mm, "渤仔生字专项练习")
     
     # 姓名和日期
     c.setFont(font_name, 12)
@@ -104,7 +104,7 @@ def draw_header(c, page_width, page_height, font_name):
     margin_x = (page_width - total_grid_width) / 2
     right_align_x = page_width - margin_x
     
-    c.drawRightString(right_align_x, page_height - 32 * mm, "姓名:__________      ____年__月__日")
+    c.drawRightString(right_align_x, page_height - 32 * mm, "________年____月______日")
     
     c.restoreState()
 

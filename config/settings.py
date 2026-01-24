@@ -4,12 +4,12 @@ import os
 
 # ================= 配置区域 =================
 
-# 1. 要练习的文字数组
-# 你可以在这里修改要练习的汉字
-CHAR_LIST = [
-    "天", "地", "人", "你", "我", "他", 
-    "上", "学", "校", "书", "写", "字"
-]
+# 1. 要练习的文字
+# 在这里输入连续的汉字字符串，程序会自动拆分
+INPUT_TEXT = "地你我他四五手足站坐山禾"
+
+# 自动转换为列表 (过滤掉空格和换行)
+CHAR_LIST = [c for c in INPUT_TEXT if c.strip()]
 
 # 2. 输出设置
 OUTPUT_DIR = "output"
@@ -21,7 +21,7 @@ FONT_PATH = r"C:\Windows\Fonts\simkai.ttf"
 
 # 4. 样式设置
 GRID_SIZE = 16 * mm          # 田字格大小
-GRID_COUNT_PER_ROW = 10      # 每行格子数
+GRID_COUNT_PER_ROW = 12      # 每行格子数
 ROW_SPACING = 4 * mm         # 行间距
 GRID_COLOR = colors.red      # 田字格颜色 (通常为红色或绿色)
 TEXT_COLOR_SOLID = colors.black # 实心字颜色
