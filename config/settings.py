@@ -28,12 +28,13 @@ STROKE_DATA_PATH = os.path.join(BASE_DIR, 'data', 'graphics.txt') # 笔顺数据
 PROXY_URL = "socks5://10.11.11.3:7895" # 下载笔顺数据时的代理，如果不需要请设为 None
 
 # 5. 样式设置
-GRID_SIZE = 16 * mm          # 田字格大小
+GRID_SIZE = 14 * mm          # 田字格大小
 GRID_COUNT_PER_ROW = 12      # 每行格子数
 ROW_SPACING = 4 * mm         # 行间距
 GRID_COLOR = colors.red      # 田字格颜色 (通常为红色或绿色)
 TEXT_COLOR_SOLID = colors.black # 实心字颜色
 TEXT_COLOR_DASHED = colors.Color(0.7, 0.7, 0.7) # 虚线/描红字颜色 (比 lightgrey 深一点)
+TRACE_COUNT = 6             # 描红字数 (不包含第一个范例字)。如果想整行描红，可以设置一个很大的数，如 100
 
 # 6. 页面内容设置
 # 日期显示: 

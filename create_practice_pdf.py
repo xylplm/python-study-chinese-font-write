@@ -224,14 +224,19 @@ def create_practice_pdf():
         draw_tian_grid(c, margin_x, current_y, settings.GRID_SIZE)
         draw_char(c, char, margin_x, current_y, settings.GRID_SIZE, font_name, 'solid')
         
-        # 第2-5个字：虚线/描红
-        for i in range(1, 5):
+        # 描红字 (根据配置)
+        trace_count = getattr(settings, 'TRACE_COUNT', 4) # 默认4个
+        start_trace_idx = 1
+        # 计算结束索引，确保不超过每行总格子数
+        end_trace_idx = min(start_trace_idx + trace_count, settings.GRID_COUNT_PER_ROW)
+        
+        for i in range(start_trace_idx, end_trace_idx):
             x = margin_x + i * settings.GRID_SIZE
             draw_tian_grid(c, x, current_y, settings.GRID_SIZE)
             draw_char(c, char, x, current_y, settings.GRID_SIZE, font_name, 'dashed')
             
         # 后面的：空白田字格
-        for i in range(5, settings.GRID_COUNT_PER_ROW):
+        for i in range(end_trace_idx, settings.GRID_COUNT_PER_ROW):
             x = margin_x + i * settings.GRID_SIZE
             draw_tian_grid(c, x, current_y, settings.GRID_SIZE)
             
