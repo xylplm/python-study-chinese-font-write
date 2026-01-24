@@ -1,11 +1,13 @@
 import os
 import sys
+import datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
+from utils.stroke_manager import StrokeManager
 
 # 导入配置
 # 将当前目录添加到 sys.path 以便能找到 config 模块
@@ -95,7 +97,7 @@ def draw_header(c, page_width, page_height, font_name):
     # 标题
     c.setFont(font_name, 24)
     c.setFillColor(colors.black)
-    c.drawCentredString(page_width / 2, page_height - 20 * mm, "渤仔生字专项练习")
+    c.drawCentredString(page_width / 2, page_height - 18 * mm, "渤仔生字专项练习")
     
     # 姓名和日期
     c.setFont(font_name, 12)
@@ -104,8 +106,25 @@ def draw_header(c, page_width, page_height, font_name):
     margin_x = (page_width - total_grid_width) / 2
     right_align_x = page_width - margin_x
     
-    c.drawRightString(right_align_x, page_height - 32 * mm, "________年____月______日")
+    # 获取日期文本
+    date_text = "________年____月______日"
+    if hasattr(settings, 'DATE_TEXT'):
+        if settings.DATE_TEXT == 'today':
+            now = datetime.datetime.now()
+            date_text = now.strftime("%Y年%m月%d日")
+        elif settings.DATE_TEXT:
+            date_text = settings.DATE_TEXT
+
+    c.drawRightString(right_align_x, page_height - 26 * mm, date_text)
     
+    c.restoreState()
+
+def draw_page_number(c, page_num, page_width):
+    """绘制页码"""
+    c.saveState()
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.black)
+    c.drawCentredString(page_width / 2, 10 * mm, f"- {page_num} -")
     c.restoreState()
 
 def create_practice_pdf():
@@ -137,36 +156,96 @@ def create_practice_pdf():
     # 绘制第一页标题
     draw_header(c, page_width, page_height, font_name)
     
+    # 页码计数
+    page_num = 1
+    
+    # 初始化笔顺管理器
+    stroke_manager = None
+    if settings.SHOW_STROKE_ORDER:
+        stroke_manager = StrokeManager()
+
     print(f"开始生成 PDF，共 {len(settings.CHAR_LIST)} 个字...")
     
+    # 调整初始 Y 坐标，如果第一行有笔顺，需要预留空间
+    # 但为了简单，我们在循环里处理 Y 的移动
+    # 只是要注意第一页的 start_y 是否足够高？
+    # 原始 start_y = page_height - HEADER - GRID_SIZE
+    # 这意味着第一行格子的顶部是 page_height - HEADER
+    # 如果有笔顺，笔顺应该在格子上面。
+    # 所以我们需要把 start_y 下移？或者把笔顺画在 start_y 上面？
+    # 如果画在上面，会和 Header 重叠。
+    # 所以我们需要下移 start_y。
+    
+    if settings.SHOW_STROKE_ORDER:
+        # 为第一行的笔顺留出空间
+        start_y -= (settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2)
+        current_y = start_y
+
     for index, char in enumerate(settings.CHAR_LIST):
         # 检查是否需要换页
-        if current_y < settings.BOTTOM_MARGIN:
-            c.showPage()
-            # 新页面绘制标题
-            draw_header(c, page_width, page_height, font_name)
-            current_y = start_y
+        # 预估需要的空间：(笔顺行 + 间距) + (田字格行 + 间距)
+        # 注意：current_y 已经是当前行的底部（如果是笔顺行，就是笔顺行的底部？不对，current_y 应该是格子的底部）
         
-        # 绘制这一行
-        # 1. 第一个字：黑色实体
+        # 让我们统一逻辑：
+        # 每次循环，先检查空间。
+        # 需要的空间 = 格子高度 + (笔顺高度 if enabled) + 间距
+        
+        needed_space = settings.GRID_SIZE + settings.ROW_SPACING
+        if settings.SHOW_STROKE_ORDER:
+            needed_space += settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2
+            
+        if current_y < settings.BOTTOM_MARGIN:
+            # 绘制当前页页码
+            draw_page_number(c, page_num, page_width)
+            
+            c.showPage()
+            page_num += 1
+            
+            # 新页面不再绘制标题，使用较小的顶部边距
+            # 假设顶部边距与底部边距相同
+            top_margin = settings.BOTTOM_MARGIN
+            
+            # 重置 Y
+            current_y = page_height - top_margin - settings.GRID_SIZE
+            if settings.SHOW_STROKE_ORDER:
+                current_y -= (settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2)
+        
+        # 1. 绘制笔顺 (如果开启)
+        if settings.SHOW_STROKE_ORDER and stroke_manager:
+            # 笔顺画在格子上方
+            # 格子顶部 = current_y + GRID_SIZE
+            # 笔顺底部 = 格子顶部 + ROW_SPACING/2
+            stroke_y = current_y + settings.GRID_SIZE + settings.ROW_SPACING/4
+            # 绘制
+            stroke_manager.draw_stroke_order(c, char, margin_x, stroke_y, settings.STROKE_ORDER_HEIGHT)
+
+        # 2. 绘制田字格行
+        # 第一个字：黑色实体
         draw_tian_grid(c, margin_x, current_y, settings.GRID_SIZE)
         draw_char(c, char, margin_x, current_y, settings.GRID_SIZE, font_name, 'solid')
         
-        # 2. 第2-5个字：虚线/描红 (索引 1, 2, 3, 4)
+        # 第2-5个字：虚线/描红
         for i in range(1, 5):
             x = margin_x + i * settings.GRID_SIZE
             draw_tian_grid(c, x, current_y, settings.GRID_SIZE)
             draw_char(c, char, x, current_y, settings.GRID_SIZE, font_name, 'dashed')
             
-        # 3. 这一行后面的：空白田字格 (索引 5 到 9)
+        # 后面的：空白田字格
         for i in range(5, settings.GRID_COUNT_PER_ROW):
             x = margin_x + i * settings.GRID_SIZE
             draw_tian_grid(c, x, current_y, settings.GRID_SIZE)
-            # 不画字
             
         # 移动到下一行
-        current_y -= (settings.GRID_SIZE + settings.ROW_SPACING)
+        # 下移量 = 格子高度 + 间距 + (笔顺高度 + 间距 if enabled)
+        step = settings.GRID_SIZE + settings.ROW_SPACING
+        if settings.SHOW_STROKE_ORDER:
+            step += settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2
+            
+        current_y -= step
         
+    # 最后一页页码
+    draw_page_number(c, page_num, page_width)
+    
     c.save()
     print(f"成功生成文件: {os.path.abspath(output_path)}")
 

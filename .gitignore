@@ -1,2 +1,4 @@
 output/hanzi_practice.pdf
-config/__pycache__/settings.cpython-313.pyc
+data/graphics.txt
+__pycache__/
+*.pyc
