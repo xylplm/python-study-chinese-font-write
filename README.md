@@ -2,15 +2,18 @@
 
 这是一个简单的 Python 工具，用于生成 PDF 格式的汉字田字格书写练习纸。
 
+![预览效果](preview.png)
+
 ## 功能特点
 
 *   **自定义汉字**：可以自由设置需要练习的汉字列表。
+*   **笔顺演示**：支持显示汉字的笔画顺序，辅助学习。
 *   **标准排版**：
     *   第一个字为黑色实体（范例）。
     *   第 2-5 个字为浅灰色（描红/临摹）。
     *   后续格子为空白田字格（独立练习）。
-*   **自动分页**：支持大量汉字，自动生成多页 PDF。
-*   **标题栏**：每页顶部包含标题和姓名/日期填写栏。
+*   **自动分页**：支持大量汉字，自动生成多页 PDF，底部包含页码。
+*   **智能标题**：首页显示标题，支持自动生成当天日期或自定义日期格式。
 *   **配置分离**：所有配置项都在单独的文件中，方便修改。
 
 ## 目录结构
@@ -18,8 +21,11 @@
 ```
 study-font-write/
 ├── config/
-│   └── settings.py      # 配置文件 (修改汉字、字体、颜色等)
+│   └── settings.py      # 配置文件 (修改汉字、日期、字体、颜色等)
+├── data/                # 存放笔顺数据文件
 ├── output/              # 生成的 PDF 文件存放位置
+├── utils/               # 工具模块
+│   └── stroke_manager.py # 笔顺管理工具
 ├── create_practice_pdf.py # 主程序脚本
 └── README.md            # 说明文档
 ```
@@ -28,17 +34,19 @@ study-font-write/
 
 ### 1. 安装依赖
 
-确保你已经安装了 Python，然后安装 `reportlab` 库：
+确保你已经安装了 Python，然后安装所需的第三方库：
 
 ```bash
-pip install reportlab
+pip install reportlab requests svglib
 ```
 
 ### 2. 修改配置 (可选)
 
 打开 `config/settings.py` 文件，你可以修改以下内容：
 
-*   `CHAR_LIST`: 要练习的汉字列表。
+*   `INPUT_TEXT`: 要练习的汉字字符串。
+*   `DATE_TEXT`: 日期显示设置 (`"today"` 显示当天，`None` 显示下划线)。
+*   `SHOW_STROKE_ORDER`: 是否显示笔顺。
 *   `FONT_PATH`: 字体文件路径 (默认使用 Windows 楷体)。
 *   `GRID_COLOR`: 田字格颜色。
 *   `TEXT_COLOR_DASHED`: 描红字的颜色。
