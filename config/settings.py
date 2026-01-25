@@ -9,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 1. 要练习的文字
 # 在这里输入连续的汉字字符串，程序会自动拆分
-INPUT_TEXT = "地你我他四五手足站坐山禾"
+INPUT_TEXT = "耳手九五九午去了可东西竹马牙用鸟是女开关先"
 
 # 自动转换为列表 (过滤掉空格和换行)
 CHAR_LIST = [c for c in INPUT_TEXT if c.strip()]
@@ -28,7 +28,7 @@ STROKE_DATA_PATH = os.path.join(BASE_DIR, 'data', 'graphics.txt') # 笔顺数据
 PROXY_URL = "socks5://10.11.11.3:7895" # 下载笔顺数据时的代理，如果不需要请设为 None
 
 # 5. 样式设置
-GRID_SIZE = 14 * mm          # 田字格大小
+GRID_SIZE = 13 * mm          # 田字格大小
 GRID_COUNT_PER_ROW = 12      # 每行格子数
 ROW_SPACING = 4 * mm         # 行间距
 GRID_COLOR = colors.red      # 田字格颜色 (通常为红色或绿色)
