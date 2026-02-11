@@ -9,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 1. 要练习的文字
 # 在这里输入连续的汉字字符串，程序会自动拆分
-INPUT_TEXT = "耳手九五九午去了可东西竹马牙用鸟是女开关先"
+INPUT_TEXT = "前后上下左右雨虫木尺本立正厂头里见在和也又才爸妈长只多办石半有牛羊心耳禾去了可东西竹马鸟是女开先关"
 
 # 自动转换为列表 (过滤掉空格和换行)
 CHAR_LIST = [c for c in INPUT_TEXT if c.strip()]

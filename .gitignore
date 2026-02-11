@@ -2,3 +2,4 @@ output/hanzi_practice.pdf
 data/graphics.txt
 __pycache__/
 *.pyc
+data/.words_cache.json

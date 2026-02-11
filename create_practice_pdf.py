@@ -216,8 +216,8 @@ def create_practice_pdf():
             # 格子顶部 = current_y + GRID_SIZE
             # 笔顺底部 = 格子顶部 + ROW_SPACING/2
             stroke_y = current_y + settings.GRID_SIZE + settings.ROW_SPACING/4
-            # 绘制
-            stroke_manager.draw_stroke_order(c, char, margin_x, stroke_y, settings.STROKE_ORDER_HEIGHT)
+            # 绘制（传入字体用于显示组词）
+            stroke_manager.draw_stroke_order(c, char, margin_x, stroke_y, settings.STROKE_ORDER_HEIGHT, font_name)
 
         # 2. 绘制田字格行
         # 第一个字：黑色实体
