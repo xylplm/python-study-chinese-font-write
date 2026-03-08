@@ -8,6 +8,7 @@
 
 *   **自定义汉字**：可以自由设置需要练习的汉字列表。
 *   **笔顺演示**：支持显示汉字的笔画顺序，辅助学习。
+*   **AI 词语生成**：使用 AI（DeepSeek）自动生成每个汉字的常用词语，并智能缓存避免重复调用。
 *   **标准排版**：
     *   第一个字为黑色实体（范例）。
     *   支持自定义描红字数量（默认 4 个，可配置为整行描红）。
@@ -30,13 +31,14 @@
 ```
 study-font-write/
 ├── config/
-│   └── settings.py      # 配置文件 (修改汉字、日期、字体、颜色等)
-├── data/                # 存放笔顺数据文件
-├── output/              # 生成的 PDF 文件存放位置
-├── utils/               # 工具模块
-│   └── stroke_manager.py # 笔顺管理工具
-├── create_practice_pdf.py # 主程序脚本
-└── README.md            # 说明文档
+│   ├── settings.py          # 配置文件 (修改汉字、日期、字体、颜色、API 等) - 不需提交
+│   └── settings.py.example  # 配置文件示例 (参考模板)
+├── data/                    # 存放笔顺数据文件
+├── output/                  # 生成的 PDF 文件存放位置
+├── utils/                   # 工具模块
+│   └── stroke_manager.py    # 笔顺管理工具
+├── create_practice_pdf.py   # 主程序脚本
+└── README.md                # 说明文档
 ```
 
 ## 使用方法
@@ -46,12 +48,22 @@ study-font-write/
 确保你已经安装了 Python，然后安装所需的第三方库：
 
 ```bash
-pip install reportlab requests svglib
+pip install reportlab requests svglib openai
 ```
 
-### 2. 修改配置 (可选)
+### 2. 配置 API 和其他参数
 
-打开 `config/settings.py` 文件，你可以修改以下内容：
+**首次使用，需要从示例配置文件创建配置：**
+
+```bash
+# Windows
+copy config\settings.py.example config\settings.py
+
+# Mac/Linux
+cp config/settings.py.example config/settings.py
+```
+
+然后打开 `config/settings.py` 文件，根据你的需求修改以下内容：
 
 *   `INPUT_TEXT`: 要练习的汉字字符串。
 *   `DATE_TEXT`: 日期显示设置 (`"today"` 显示当天，`None` 显示下划线)。
@@ -59,7 +71,14 @@ pip install reportlab requests svglib
 *   `FONT_PATH`: 字体文件路径 (默认使用 Windows 楷体)。
 *   `GRID_COLOR`: 田字格颜色。
 *   `TEXT_COLOR_DASHED`: 描红字的颜色。
+*   **`OPENAI_BASE_URL`**: 将 `http://your-api-base-url/v1` 替换为实际的 API 地址。
+*   **`OPENAI_API_KEY`**: 将 `sk-your-api-key-here` 替换为实际的 API Key。
+*   `OPENAI_MODEL`: 使用的模型名称（推荐 `deepseek-v3-zspace`）。
 *   其他排版参数...
+
+> **提示**：AI 生成的词语会自动缓存到 `.words_cache.json`，下次运行时直接使用缓存，不会重复调用 API，节省成本。
+>
+> **重要**：不要将 `settings.py` 提交到版本控制系统，使用 `settings.py.example` 作为模板共享配置结构。
 
 ### 3. 运行程序
 
@@ -77,3 +96,8 @@ python create_practice_pdf.py
 
 *   **找不到字体**：请检查 `config/settings.py` 中的 `FONT_PATH` 是否正确指向了你电脑上的字体文件。
 *   **乱码**：确保使用的字体支持中文（推荐使用楷体或黑体）。
+*   **AI 调用失败**：
+    *   检查 `OPENAI_BASE_URL` 和 `OPENAI_API_KEY` 是否配置正确。
+    *   检查网络连接是否正常。
+    *   确保有网络访问权限（如需要代理，请在 `config/settings.py` 中设置）。
+*   **如何清除词语缓存**：删除 `data/.words_cache.json` 文件，下次运行时会重新生成。
