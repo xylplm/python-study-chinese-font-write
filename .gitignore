@@ -3,3 +3,4 @@ data/graphics.txt
 __pycache__/
 *.pyc
 data/.words_cache.json
+config/settings.py

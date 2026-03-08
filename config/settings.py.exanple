@@ -9,8 +9,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 1. 要练习的文字
 # 在这里输入连续的汉字字符串，程序会自动拆分
-INPUT_TEXT = "前后上下左右雨虫木尺本立正厂头里见在和也又才爸妈长只多办石半有牛羊心耳禾去了可东西竹马鸟是女开先关"
-
+#INPUT_TEXT = "后雨虫头里在和长石半有耳了可东西鸟是女先关"
+INPUT_TEXT = "春冬吹花飞入什么古胡双言青清晴苗请生字红动万无明文卡片合"
 # 自动转换为列表 (过滤掉空格和换行)
 CHAR_LIST = [c for c in INPUT_TEXT if c.strip()]
 
@@ -47,6 +47,12 @@ DATE_TEXT = "today"
 HEADER_HEIGHT = 26 * mm      # 顶部标题区域高度
 BOTTOM_MARGIN = 16 * mm      # 底部留白
 STROKE_ORDER_HEIGHT = 5 * mm # 笔顺行高度
+
+# 7. AI 词语生成设置
+# OpenAI 兼容的 API 配置
+OPENAI_BASE_URL = "http://10.11.11.22:8707/v1"
+OPENAI_API_KEY = "AAAAAAA"
+OPENAI_MODEL = "GPT-4o"
 
 # 笔顺设置
 SHOW_STROKE_ORDER = True

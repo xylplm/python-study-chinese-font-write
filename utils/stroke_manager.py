@@ -9,6 +9,7 @@ import sys
 from reportlab.graphics.shapes import Drawing, Group
 from reportlab.lib import colors
 import time
+from openai import OpenAI
 
 # 尝试导入配置
 try:
@@ -18,32 +19,25 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import config.settings as settings
 
-# 尝试导入 jieba
-try:
-    import jieba
-    HAS_JIEBA = True
-except ImportError:
-    HAS_JIEBA = False
-
 class StrokeManager:
     def __init__(self):
         self.data_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'graphics.txt')
         self.data_url = "https://raw.githubusercontent.com/skishore/makemeahanzi/master/graphics.txt"
         self.char_data = {}
-        # 使用缓存文件来存储已查询过的组词，减少重复查询
+        # 使用缓存文件来存储已生成的词语，避免重复调用 AI
         self.cache_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', '.words_cache.json')
         self.words_cache = {}
-        # 本地词库
-        self.corpus_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'words_corpus.json')
-        self.words_corpus = {}
+        
+        # 初始化 OpenAI 客户端
+        self.client = OpenAI(
+            base_url=settings.OPENAI_BASE_URL,
+            api_key=settings.OPENAI_API_KEY
+        )
+        self.model = settings.OPENAI_MODEL
+        
         self._load_data()
         self._load_cache()
-        self._load_corpus()
-        
-        # 初始化 jieba
-        if HAS_JIEBA:
-            jieba.initialize()
-            print("jieba 词库已加载")
+        print("AI 词语生成系统已就绪")
 
 
     def _load_data(self):
@@ -95,19 +89,6 @@ class StrokeManager:
         else:
             self.words_cache = {}
 
-    def _load_corpus(self):
-        """加载本地词库"""
-        if os.path.exists(self.corpus_file):
-            try:
-                with open(self.corpus_file, 'r', encoding='utf-8') as f:
-                    self.words_corpus = json.load(f)
-                print(f"加载本地词库完成，共 {len(self.words_corpus)} 个汉字。")
-            except Exception as e:
-                print(f"加载本地词库失败: {e}")
-                self.words_corpus = {}
-        else:
-            self.words_corpus = {}
-
     def _save_cache(self):
         """保存组词缓存"""
         try:
@@ -116,6 +97,56 @@ class StrokeManager:
                 json.dump(self.words_cache, f, ensure_ascii=False, indent=2)
         except Exception as e:
             pass  # 缓存保存失败不影响主流程
+
+    def _generate_words_by_ai(self, char):
+        """使用 AI 生成包含该汉字的常见词语"""
+        try:
+            print(f"正在为 '{char}' 生成词语...")
+            
+            prompt = f"""请为汉字"{char}"生成3个常见的组词。要求：
+1. 每个词语必须包含这个汉字
+2. 词语小学生需要掌握的日常词语
+3. 每个词语长度2-4个汉字
+4. 用逗号分隔
+
+直接返回词语列表，例如：词语1,词语2,词语3"""
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=100
+            )
+            
+            # 解析 AI 响应
+            content = response.choices[0].message.content.strip()
+            
+            # 提取词语
+            words = [w.strip() for w in content.replace('，', ',').split(',') if w.strip()]
+            
+            # 验证词语
+            valid_words = []
+            for word in words:
+                # 确保词语包含目标汉字且长度合理
+                if char in word and 2 <= len(word) <= 4:
+                    valid_words.append(word)
+            
+            # 如果没有有效词语，返回空列表
+            if not valid_words:
+                print(f"未能为 '{char}' 生成有效词语")
+                return []
+            
+            print(f"成功生成词语: {', '.join(valid_words)}")
+            return valid_words[:3]  # 最多返回3个
+            
+        except Exception as e:
+            print(f"AI 生成词语失败: {e}")
+            return []
 
     def get_strokes(self, char):
         """获取汉字的笔画路径列表"""
@@ -126,61 +157,20 @@ class StrokeManager:
     def get_words(self, char):
         """获取汉字的相关组词（2-3个）
         
-        优先级：缓存 > 本地词库 > 在线接口
+        优先级：缓存 > AI 生成
         """
         # 1. 检查缓存
         if char in self.words_cache:
             return self.words_cache[char]
         
-        # 2. 检查本地词库
-        if char in self.words_corpus:
-            words = self.words_corpus[char]
-            self.words_cache[char] = words
-            self._save_cache()
-            return words
-        
-        # 3. 尝试在线接口
-        words = self._query_words_from_ownthink(char)
+        # 2. 使用 AI 生成词语
+        words = self._generate_words_by_ai(char)
         
         # 保存到缓存
         self.words_cache[char] = words
         self._save_cache()
         
         return words
-
-    def _query_words_from_ownthink(self, char):
-        """从 Ownthink API 查询（降频处理）"""
-        try:
-            time.sleep(0.5)  # 降频
-            
-            url = f"https://api.ownthink.com/kg/knowledge?entity={char}"
-            response = requests.get(url, timeout=5)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('message') == 'success':
-                    # 从返回数据中提取可能的词汇
-                    words = []
-                    avp = data.get('data', {}).get('avp', [])
-                    
-                    for item in avp:
-                        if isinstance(item, list) and len(item) >= 2:
-                            value = item[1]
-                            if isinstance(value, str) and '、' in value:
-                                # 如果值中包含顿号，可能是多个词汇
-                                candidates = value.split('、')
-                                for cand in candidates:
-                                    cand = cand.strip()
-                                    if char in cand and 2 <= len(cand) <= 4 and cand not in words:
-                                        words.append(cand)
-                                        if len(words) >= 3:
-                                            return words
-                    
-                    return words
-        except:
-            pass
-        
-        return []
 
     def get_stroke_drawings(self, char, size=100):
         """
