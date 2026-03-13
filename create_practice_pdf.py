@@ -64,6 +64,27 @@ def draw_tian_grid(c, x, y, size):
     # 恢复状态
     c.restoreState()
 
+def draw_pinyin_grid(c, x, y, width, height):
+    """绘制拼音格子（用于手写拼音）"""
+    c.saveState()
+    
+    # 设置线条样式
+    c.setLineWidth(0.5)
+    c.setStrokeColor(settings.PINYIN_GRID_COLOR)  # 使用配置的拼音格颜色
+    
+    # 画外框
+    c.rect(x, y, width, height)
+    
+    # 画两条水平参考线（分三个区域，用于声调标记）
+    line_height = height / 3
+    c.setLineWidth(0.2)
+    for i in range(1, 3):
+        line_y = y + i * line_height
+        c.line(x, line_y, x + width, line_y)
+    
+    # 恢复状态
+    c.restoreState()
+
 def draw_char(c, char, x, y, size, font_name, style='solid'):
     """绘制汉字"""
     c.saveState()
@@ -99,12 +120,18 @@ def draw_header(c, page_width, page_height, font_name):
     c.setFillColor(colors.black)
     c.drawCentredString(page_width / 2, page_height - 18 * mm, "渤仔生字专项练习")
     
-    # 姓名和日期
+    # 副标题和日期
     c.setFont(font_name, 12)
     # 计算右边距，与田字格对齐
     total_grid_width = settings.GRID_COUNT_PER_ROW * settings.GRID_SIZE
     margin_x = (page_width - total_grid_width) / 2
     right_align_x = page_width - margin_x
+    left_align_x = margin_x
+    subtitle_y = page_height - 26 * mm
+    
+    # 显示副标题（左对齐）
+    if hasattr(settings, 'SUBTITLE') and settings.SUBTITLE:
+        c.drawString(left_align_x, subtitle_y, settings.SUBTITLE)
     
     # 获取日期文本
     date_text = "________年____月______日"
@@ -115,16 +142,27 @@ def draw_header(c, page_width, page_height, font_name):
         elif settings.DATE_TEXT:
             date_text = settings.DATE_TEXT
 
-    c.drawRightString(right_align_x, page_height - 26 * mm, date_text)
+    c.drawRightString(right_align_x, subtitle_y, date_text)
     
     c.restoreState()
 
-def draw_page_number(c, page_num, page_width):
-    """绘制页码"""
+def draw_page_number(c, page_num, page_width, subtitle="", font_name="Helvetica"):
+    """绘制页码（格式：副标题 - 页码）"""
     c.saveState()
-    c.setFont("Helvetica", 10)
+    # 如果副标题包含中文，使用中文字体；否则使用 Helvetica
+    if subtitle and any('\u4e00' <= char <= '\u9fff' for char in subtitle):
+        c.setFont(font_name, 10)  # 使用可支持中文的字体
+    else:
+        c.setFont("Helvetica", 10)
     c.setFillColor(colors.black)
-    c.drawCentredString(page_width / 2, 10 * mm, f"- {page_num} -")
+    
+    # 构建页码文本
+    if subtitle:
+        page_text = f"{subtitle}  -  {page_num}"
+    else:
+        page_text = f"- {page_num}"
+    
+    c.drawCentredString(page_width / 2, 10 * mm, page_text)
     c.restoreState()
 
 def create_practice_pdf():
@@ -150,7 +188,11 @@ def create_practice_pdf():
     margin_x = (page_width - total_grid_width) / 2
     
     # 初始 Y 坐标 (顶部留出标题空间)
-    start_y = page_height - settings.HEADER_HEIGHT - settings.GRID_SIZE
+    # 需要为笔顺、拼音格、间距预留足够空间
+    start_y = page_height - settings.HEADER_HEIGHT
+    if settings.SHOW_STROKE_ORDER:
+        start_y -= (settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING)
+    start_y -= (settings.PINYIN_GRID_HEIGHT + settings.PINYIN_SPACING + settings.GRID_SIZE)
     current_y = start_y
     
     # 绘制第一页标题
@@ -164,39 +206,21 @@ def create_practice_pdf():
     if settings.SHOW_STROKE_ORDER:
         stroke_manager = StrokeManager()
 
-    print(f"开始生成 PDF，共 {len(settings.CHAR_LIST)} 个字...")
-    
-    # 调整初始 Y 坐标，如果第一行有笔顺，需要预留空间
-    # 但为了简单，我们在循环里处理 Y 的移动
-    # 只是要注意第一页的 start_y 是否足够高？
-    # 原始 start_y = page_height - HEADER - GRID_SIZE
-    # 这意味着第一行格子的顶部是 page_height - HEADER
-    # 如果有笔顺，笔顺应该在格子上面。
-    # 所以我们需要把 start_y 下移？或者把笔顺画在 start_y 上面？
-    # 如果画在上面，会和 Header 重叠。
-    # 所以我们需要下移 start_y。
-    
-    if settings.SHOW_STROKE_ORDER:
-        # 为第一行的笔顺留出空间
-        start_y -= (settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2)
-        current_y = start_y
+    # 初始化子标签（用于页码显示）
+    subtitle_text = getattr(settings, 'SUBTITLE', '')
 
     for index, char in enumerate(settings.CHAR_LIST):
         # 检查是否需要换页
-        # 预估需要的空间：(笔顺行 + 间距) + (田字格行 + 间距)
-        # 注意：current_y 已经是当前行的底部（如果是笔顺行，就是笔顺行的底部？不对，current_y 应该是格子的底部）
+        # 预估需要的空间：(笔顺行 + 间距) + (拼音格 + 间距 + 田字格 + 间距)
+        # 注意：拼音格和田字格之间有 PINYIN_SPACING 间距
         
-        # 让我们统一逻辑：
-        # 每次循环，先检查空间。
-        # 需要的空间 = 格子高度 + (笔顺高度 if enabled) + 间距
-        
-        needed_space = settings.GRID_SIZE + settings.ROW_SPACING
+        needed_space = settings.GRID_SIZE + settings.PINYIN_GRID_HEIGHT + settings.PINYIN_SPACING + settings.ROW_SPACING
         if settings.SHOW_STROKE_ORDER:
-            needed_space += settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2
+            needed_space += settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING
             
         if current_y < settings.BOTTOM_MARGIN:
             # 绘制当前页页码
-            draw_page_number(c, page_num, page_width)
+            draw_page_number(c, page_num, page_width, subtitle_text, font_name)
             
             c.showPage()
             page_num += 1
@@ -205,21 +229,56 @@ def create_practice_pdf():
             # 假设顶部边距与底部边距相同
             top_margin = settings.BOTTOM_MARGIN
             
-            # 重置 Y
-            current_y = page_height - top_margin - settings.GRID_SIZE
+            # 重置 Y（与第一页相同的布局）
+            current_y = page_height - top_margin
             if settings.SHOW_STROKE_ORDER:
-                current_y -= (settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2)
+                current_y -= (settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING)
+            current_y -= (settings.PINYIN_GRID_HEIGHT + settings.PINYIN_SPACING + settings.GRID_SIZE)
         
-        # 1. 绘制笔顺 (如果开启)
+        # 1. 绘制笔顺行 (如果开启)
         if settings.SHOW_STROKE_ORDER and stroke_manager:
-            # 笔顺画在格子上方
-            # 格子顶部 = current_y + GRID_SIZE
-            # 笔顺底部 = 格子顶部 + ROW_SPACING/2
-            stroke_y = current_y + settings.GRID_SIZE + settings.ROW_SPACING/4
-            # 绘制（传入字体用于显示组词）
-            stroke_manager.draw_stroke_order(c, char, margin_x, stroke_y, settings.STROKE_ORDER_HEIGHT, font_name)
+            # 笔顺行布局：拼音-字 + 间距 + 笔画 + 间距 + 组词（水平对齐，字体大小统一）
+            stroke_y = current_y + settings.GRID_SIZE + settings.PINYIN_SPACING + settings.PINYIN_GRID_HEIGHT + settings.ROW_SPACING/2
+            
+            c.saveState()
+            
+            # 统一的字体大小和颜色
+            font_size = 14
+            c.setFont(font_name, font_size)
+            c.setFillColor(colors.black)
+            
+            # 统一的Y坐标（底部对齐）
+            text_y = stroke_y + settings.STROKE_ORDER_HEIGHT * 0.15
+            
+            # 1a. 绘制拼音-字组合（如：yu-语）
+            pinyin = stroke_manager.get_pinyin(char)
+            current_x = margin_x
+            
+            # 组合显示拼音-字
+            if pinyin:
+                label_text = f"{pinyin}-{char}"
+                c.drawString(current_x, text_y, label_text)
+                # 计算该文本的宽度
+                text_width = c.stringWidth(label_text, font_name, font_size)
+                current_x += text_width + 5 * mm
+            else:
+                c.drawString(current_x, text_y, char)
+                text_width = c.stringWidth(char, font_name, font_size)
+                current_x += text_width + 5 * mm
+            
+            c.restoreState()
+            
+            # 1b. 绘制笔顺序列（从current_x开始）
+            stroke_manager.draw_stroke_order_at(c, char, current_x, stroke_y, settings.STROKE_ORDER_HEIGHT, font_name)
 
-        # 2. 绘制田字格行
+        # 2. 绘制拼音格子行 (在田字格上方)
+        # 拼音格的底部与田字格顶部之间留出间距
+        pinyin_y = current_y + settings.GRID_SIZE + settings.PINYIN_SPACING
+        for i in range(settings.GRID_COUNT_PER_ROW):
+            x = margin_x + i * settings.GRID_SIZE
+            draw_pinyin_grid(c, x, pinyin_y, settings.GRID_SIZE, settings.PINYIN_GRID_HEIGHT)
+
+        # 3. 绘制田字格行
         # 第一个字：黑色实体
         draw_tian_grid(c, margin_x, current_y, settings.GRID_SIZE)
         draw_char(c, char, margin_x, current_y, settings.GRID_SIZE, font_name, 'solid')
@@ -241,15 +300,15 @@ def create_practice_pdf():
             draw_tian_grid(c, x, current_y, settings.GRID_SIZE)
             
         # 移动到下一行
-        # 下移量 = 格子高度 + 间距 + (笔顺高度 + 间距 if enabled)
-        step = settings.GRID_SIZE + settings.ROW_SPACING
+        # 下移量 = 拼音格高度 + 拼音间距 + 格子高度 + 行间距 + (笔顺高度 + 行间距 if enabled)
+        step = settings.GRID_SIZE + settings.PINYIN_GRID_HEIGHT + settings.PINYIN_SPACING + settings.ROW_SPACING
         if settings.SHOW_STROKE_ORDER:
-            step += settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING/2
+            step += settings.STROKE_ORDER_HEIGHT + settings.ROW_SPACING
             
         current_y -= step
         
     # 最后一页页码
-    draw_page_number(c, page_num, page_width)
+    draw_page_number(c, page_num, page_width, subtitle_text, font_name)
     
     c.save()
     print(f"成功生成文件: {os.path.abspath(output_path)}")

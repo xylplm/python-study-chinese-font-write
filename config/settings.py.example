@@ -10,7 +10,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 1. 要练习的文字
 # 在这里输入连续的汉字字符串，程序会自动拆分
 #INPUT_TEXT = "后雨虫头里在和长石半有耳了可东西鸟是女先关"
-INPUT_TEXT = "春冬吹花飞入什么古胡双言青清晴苗请生字红动万无明文卡片合"
+#INPUT_TEXT = "春冬吹花飞入什么古胡双言青清晴苗请生字红动万无明文卡片合"
+INPUT_TEXT = "语言坐无文卡片合"
 # 自动转换为列表 (过滤掉空格和换行)
 CHAR_LIST = [c for c in INPUT_TEXT if c.strip()]
 
@@ -32,11 +33,16 @@ GRID_SIZE = 13 * mm          # 田字格大小
 GRID_COUNT_PER_ROW = 12      # 每行格子数
 ROW_SPACING = 4 * mm         # 行间距
 GRID_COLOR = colors.red      # 田字格颜色 (通常为红色或绿色)
+PINYIN_GRID_COLOR = colors.Color(0.5, 0.8, 0.5)  # 拼音格颜色 (深绿色)
 TEXT_COLOR_SOLID = colors.black # 实心字颜色
 TEXT_COLOR_DASHED = colors.Color(0.7, 0.7, 0.7) # 虚线/描红字颜色 (比 lightgrey 深一点)
 TRACE_COUNT = 6             # 描红字数 (不包含第一个范例字)。如果想整行描红，可以设置一个很大的数，如 100
 
 # 6. 页面内容设置
+# 副标题（在日期栏左边和页码中显示）
+# 例如: "姓名：___________" 或 "2、《吃水不忘挖井人》"
+SUBTITLE = "姓名：___________"
+
 # 日期显示: 
 #   None 或 "" -> 显示下划线 "________年____月______日"
 #   "today"    -> 显示当天日期
@@ -47,6 +53,8 @@ DATE_TEXT = "today"
 HEADER_HEIGHT = 26 * mm      # 顶部标题区域高度
 BOTTOM_MARGIN = 16 * mm      # 底部留白
 STROKE_ORDER_HEIGHT = 5 * mm # 笔顺行高度
+PINYIN_GRID_HEIGHT = 8 * mm  # 拼音格子高度
+PINYIN_SPACING = 1 * mm      # 拼音格与田字格之间的间距
 
 # 7. AI 词语生成设置
 # OpenAI 兼容的 API 配置
@@ -54,3 +62,4 @@ STROKE_ORDER_HEIGHT = 5 * mm # 笔顺行高度
 OPENAI_BASE_URL = "http://your-api-base-url/v1"  # 替换为你的 API 基础地址
 OPENAI_API_KEY = "sk-your-api-key-here"  # 替换为你的 API Key
 OPENAI_MODEL = "deepseek-v3-zspace"  # 模型名称
+

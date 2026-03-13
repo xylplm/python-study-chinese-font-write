@@ -19,6 +19,13 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import config.settings as settings
 
+# 尝试导入拼音库
+try:
+    from pypinyin import lazy_pinyin, Style
+    HAS_PYPINYIN = True
+except ImportError:
+    HAS_PYPINYIN = False
+
 class StrokeManager:
     def __init__(self):
         self.data_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'graphics.txt')
@@ -97,6 +104,18 @@ class StrokeManager:
                 json.dump(self.words_cache, f, ensure_ascii=False, indent=2)
         except Exception as e:
             pass  # 缓存保存失败不影响主流程
+
+    def get_pinyin(self, char):
+        """获取汉字的拼音"""
+        if HAS_PYPINYIN:
+            try:
+                result = lazy_pinyin(char, style=Style.NORMAL)
+                if result and result[0]:
+                    return result[0]
+            except Exception:
+                pass
+        # 如果没有pypinyin库或获取失败，返回空字符串
+        return ""
 
     def _generate_words_by_ai(self, char):
         """使用 AI 生成包含该汉字的常见词语"""
@@ -229,6 +248,18 @@ class StrokeManager:
         :param height: 笔顺行高度
         :param font_name: 中文字体名称（用于显示组词）
         """
+        self.draw_stroke_order_at(c, char, x, y, height, font_name)
+
+    def draw_stroke_order_at(self, c, char, x, y, height, font_name=None):
+        """
+        在 Canvas 上从指定位置绘制汉字的笔顺序列和相关组词
+        :param c: Canvas 对象
+        :param char: 汉字
+        :param x: 起始 X 坐标
+        :param y: 起始 Y 坐标 (底部)
+        :param height: 笔顺行高度
+        :param font_name: 中文字体名称（用于显示组词）
+        """
         drawings = self.get_stroke_drawings(char, size=height)
         if not drawings:
             return
@@ -245,17 +276,17 @@ class StrokeManager:
         # 绘制组词（如果有）
         words = self.get_words(char)
         if words:
-            # 组词显示在笔顺序列右边，用较大的字体和浅色
+            # 组词显示在笔顺序列右边，与拼音-字保持对齐
             words_x = current_x + height * 0.3
-            words_y = y + height * 0.35  # 竖直位置
+            # 调整Y坐标使其与开头的拼音-字对齐（高度中部）
+            words_y = y + height * 0.15
             
             c.saveState()
-            # 使用中文字体（如果提供）或使用 Helvetica
-            # 字体大小与笔顺高度成比例
+            # 使用统一的字体大小11号，与拼音-字对齐
             if font_name:
-                c.setFont(font_name, int(height * 0.9))  # 字体大小为高度的90%
+                c.setFont(font_name, 11)
             else:
-                c.setFont("Helvetica", 12)
+                c.setFont("Helvetica", 11)
             
             c.setFillColor(colors.black)  # 黑色
             
