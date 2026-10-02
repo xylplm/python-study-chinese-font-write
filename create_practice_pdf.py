@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -111,6 +112,39 @@ def draw_char(c, char, x, y, size, font_name, style='solid'):
         
     c.restoreState()
 
+def draw_group_word(c, word, x, y, width, height, font_name):
+    """在指定区域内绘制组词描红"""
+    c.saveState()
+
+    font_size = height * 0.75
+    max_width = width - 2 * mm
+    while font_size > 6 and c.stringWidth(word, font_name, font_size) > max_width:
+        font_size -= 0.5
+
+    c.setFont(font_name, font_size)
+    c.setFillColor(settings.TEXT_COLOR_DASHED)
+
+    text_y = y + (height - font_size) / 2 + font_size * 0.15
+    c.drawCentredString(x + width / 2, text_y, word)
+
+    c.restoreState()
+
+def load_words_cache():
+    """直接读取本地组词缓存，不触发 AI 生成"""
+    cache_file = os.path.join(settings.BASE_DIR, 'data', '.words_cache.json')
+    if not os.path.exists(cache_file):
+        return {}
+
+    try:
+        with open(cache_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+
+    return {}
+
 def draw_header(c, page_width, page_height, font_name):
     """绘制页面标题"""
     c.saveState()
@@ -206,6 +240,8 @@ def create_practice_pdf():
     if settings.SHOW_STROKE_ORDER:
         stroke_manager = StrokeManager()
 
+    words_cache = load_words_cache()
+
     # 初始化子标签（用于页码显示）
     subtitle_text = getattr(settings, 'SUBTITLE', '')
 
@@ -286,8 +322,10 @@ def create_practice_pdf():
         # 描红字 (根据配置)
         trace_count = getattr(settings, 'TRACE_COUNT', 4) # 默认4个
         start_trace_idx = 1
-        # 计算结束索引，确保不超过每行总格子数
-        end_trace_idx = min(start_trace_idx + trace_count, settings.GRID_COUNT_PER_ROW)
+        # 最后两格保留给组词，因此描红字最多到倒数第三格
+        word_start_idx = max(settings.GRID_COUNT_PER_ROW - 2, start_trace_idx)
+        # 计算结束索引，确保不超过描红区间
+        end_trace_idx = min(start_trace_idx + trace_count, word_start_idx)
         
         for i in range(start_trace_idx, end_trace_idx):
             x = margin_x + i * settings.GRID_SIZE
@@ -298,6 +336,14 @@ def create_practice_pdf():
         for i in range(end_trace_idx, settings.GRID_COUNT_PER_ROW):
             x = margin_x + i * settings.GRID_SIZE
             draw_tian_grid(c, x, current_y, settings.GRID_SIZE)
+
+        # 最后两格：直接使用缓存里的第一个组词做描红
+        cached_words = words_cache.get(char, [])
+        first_word = cached_words[0] if cached_words else ""
+        if first_word:
+            word_x = margin_x + word_start_idx * settings.GRID_SIZE
+            word_width = settings.GRID_SIZE * 2
+            draw_group_word(c, first_word, word_x, current_y, word_width, settings.GRID_SIZE, font_name)
             
         # 移动到下一行
         # 下移量 = 拼音格高度 + 拼音间距 + 格子高度 + 行间距 + (笔顺高度 + 行间距 if enabled)

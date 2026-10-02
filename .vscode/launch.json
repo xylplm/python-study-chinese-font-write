@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "运行练习PDF生成器",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/create_practice_pdf.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true
+    }
+  ]
+}

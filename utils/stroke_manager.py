@@ -106,10 +106,10 @@ class StrokeManager:
             pass  # 缓存保存失败不影响主流程
 
     def get_pinyin(self, char):
-        """获取汉字的拼音"""
+        """获取汉字的拼音（带声调符号）"""
         if HAS_PYPINYIN:
             try:
-                result = lazy_pinyin(char, style=Style.NORMAL)
+                result = lazy_pinyin(char, style=Style.TONE)
                 if result and result[0]:
                     return result[0]
             except Exception:
